@@ -58,12 +58,24 @@ class ButtonPanel:
 
     def render(self, frame, stats_lines=None):
         """Returns a new frame with the sidebar (buttons + optional live
-        stats block beneath them) drawn on the right edge."""
+        stats block beneath them) drawn on the right edge. The canvas is
+        made tall enough to fit everything — if the sidebar content needs
+        more vertical room than the video frame, the window grows rather
+        than silently clipping stats off the bottom."""
         h, w = frame.shape[:2]
         self._frame_width = w
-        canvas = cv2.copyMakeBorder(frame, 0, 0, 0, SIDEBAR_WIDTH, cv2.BORDER_CONSTANT, value=(40, 40, 40))
 
         last_bottom = BUTTON_MARGIN
+        for _, _, (_, _, _, y2) in self._rects:
+            last_bottom = y2
+
+        stats_lines = stats_lines or []
+        needed_height = last_bottom + 32 + len(stats_lines) * 20 + BUTTON_MARGIN
+        canvas_height = max(h, needed_height)
+        extra = canvas_height - h
+
+        canvas = cv2.copyMakeBorder(frame, 0, extra, 0, SIDEBAR_WIDTH, cv2.BORDER_CONSTANT, value=(40, 40, 40))
+
         for label, _, (x1, y1, x2, y2) in self._rects:
             bx1, by1, bx2, by2 = x1 + w, y1, x2 + w, y2
             cv2.rectangle(canvas, (bx1, by1), (bx2, by2), (90, 90, 90), -1)
@@ -72,7 +84,6 @@ class ButtonPanel:
             tx = bx1 + max(4, ((bx2 - bx1) - text_size[0]) // 2)
             ty = by1 + ((by2 - by1) + text_size[1]) // 2
             cv2.putText(canvas, label, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-            last_bottom = y2
 
         if stats_lines:
             cv2.line(canvas, (w + BUTTON_MARGIN, last_bottom + 10), (w + SIDEBAR_WIDTH - BUTTON_MARGIN, last_bottom + 10),

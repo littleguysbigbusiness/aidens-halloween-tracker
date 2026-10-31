@@ -246,8 +246,17 @@ def main():
                 cv2.imshow(WINDOW_NAME, display_frame)
                 key = cv2.waitKey(1) & 0xFF
 
+                # Detect the window being closed via its native X button —
+                # OpenCV doesn't deliver that as a keypress, so without this
+                # check the loop keeps running against a destroyed window
+                # and the app looks frozen/unkillable.
+                try:
+                    window_closed = cv2.getWindowProperty(WINDOW_NAME, cv2.WND_PROP_VISIBLE) < 1
+                except cv2.error:
+                    window_closed = True
+
                 action = panel.poll_action()
-                if key == ord("q"):
+                if key == ord("q") or window_closed:
                     action = "quit"
 
                 if action == "quit":

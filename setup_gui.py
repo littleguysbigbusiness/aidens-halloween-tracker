@@ -13,6 +13,7 @@ import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+import config
 from setup import set_config_value, set_secret
 from network_scan import get_local_subnet_prefix, scan_for_cameras, try_rtsp_url, COMMON_RTSP_PATHS, RTSP_PORT
 
@@ -142,15 +143,16 @@ class SetupApp(tk.Tk):
         frame.pack(fill="x", padx=12, pady=8)
 
         ttk.Label(frame, text="Total candy tonight:").grid(row=0, column=0, sticky="w")
-        self.candy_total_var = tk.StringVar()
+        current_total = config.CANDY_TOTAL if config.CANDY_TOTAL is not None else ""
+        self.candy_total_var = tk.StringVar(value=str(current_total))
         ttk.Entry(frame, textvariable=self.candy_total_var, width=10).grid(row=0, column=1, sticky="w", padx=4)
 
         ttk.Label(frame, text="Per trick-or-treater:").grid(row=1, column=0, sticky="w")
-        self.candy_per_var = tk.StringVar(value="2")
+        self.candy_per_var = tk.StringVar(value=str(config.CANDY_PER_VISITOR))
         ttk.Entry(frame, textvariable=self.candy_per_var, width=10).grid(row=1, column=1, sticky="w", padx=4)
 
         ttk.Label(frame, text="End hour (24h, e.g. 22 = 10pm):").grid(row=2, column=0, sticky="w")
-        self.end_hour_var = tk.StringVar(value="21")
+        self.end_hour_var = tk.StringVar(value=str(config.EVENT_END_HOUR))
         ttk.Spinbox(frame, from_=0, to=23, textvariable=self.end_hour_var, width=8).grid(row=2, column=1, sticky="w", padx=4)
 
     # --- Render dashboard ---
@@ -180,15 +182,20 @@ class SetupApp(tk.Tk):
         if self.working_rtsp_url:
             set_secret("RTSP_URL", repr(self.working_rtsp_url))
 
-        candy_total = self.candy_total_var.get().strip()
-        if candy_total:
-            try:
-                set_config_value("CANDY_TOTAL", int(candy_total))
-                set_config_value("CANDY_PER_VISITOR", int(self.candy_per_var.get() or 2))
-                set_config_value("EVENT_END_HOUR", int(self.end_hour_var.get() or 21))
-            except ValueError:
-                messagebox.showerror("Invalid candy numbers", "Candy amounts and end hour must be whole numbers.")
-                return
+        try:
+            candy_total = self.candy_total_var.get().strip()
+            set_config_value("CANDY_TOTAL", int(candy_total) if candy_total else None)
+
+            candy_per = self.candy_per_var.get().strip()
+            if candy_per:
+                set_config_value("CANDY_PER_VISITOR", int(candy_per))
+
+            end_hour = self.end_hour_var.get().strip()
+            if end_hour:
+                set_config_value("EVENT_END_HOUR", int(end_hour))
+        except ValueError:
+            messagebox.showerror("Invalid candy numbers", "Candy amounts and end hour must be whole numbers.")
+            return
 
         if self.render_url_var is not None:
             url = self.render_url_var.get().strip()
