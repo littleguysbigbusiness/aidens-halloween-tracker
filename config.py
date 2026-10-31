@@ -97,6 +97,12 @@ STATS_VERBOSE_DEFAULT = True
 # The local tracker will push stats there every RENDER_PUSH_INTERVAL_SECONDS
 # so the public page stays live. Leave RENDER_URL as None to skip this —
 # the LAN-only dashboard above still works either way.
+# PUBLIC_SHARING_ENABLED is the actual on/off switch — even with RENDER_URL
+# configured, nothing gets pushed unless this is True (there's also a
+# "Public: On/Off" button in the app to flip it at runtime without editing
+# this file). Sharing to the internet should be something you turn on, not
+# something that happens by default.
+PUBLIC_SHARING_ENABLED = False
 try:
     from local_settings import RENDER_URL
 except ImportError:
@@ -118,9 +124,9 @@ DASHBOARD_PORT = 8787
 # CANDY_PER_VISITOR to how many you give each trick-or-treater. The tracker
 # will estimate whether you're on pace to run out before EVENT_END_HOUR
 # (24-hour local time, e.g. 21 = 9pm) based on tonight's visit rate so far.
-CANDY_TOTAL = None  # e.g. 200 — leave as None to disable candy tracking
-CANDY_PER_VISITOR = 2
-EVENT_END_HOUR = 21
+CANDY_TOTAL = 100
+CANDY_PER_VISITOR = 1
+EVENT_END_HOUR = 22  # 10pm
 
 # --- Display ---
 SHOW_PREVIEW_WINDOW = True

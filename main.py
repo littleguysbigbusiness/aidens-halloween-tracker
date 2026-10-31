@@ -47,6 +47,7 @@ NORMAL_BUTTONS = [
     ("-1", "decrement"),
     ("Edit Zone", "edit_zone"),
     ("Stats: Full", "toggle_stats_verbose"),
+    ("Public: Off", "toggle_public_sharing"),
     ("Quit", "quit"),
 ]
 
@@ -58,6 +59,11 @@ EDIT_BUTTONS = [
 
 
 def main():
+    if not config.RTSP_URL.startswith("rtsp://"):
+        print(f"ERROR: RTSP_URL doesn't look like a real camera URL: {config.RTSP_URL!r}")
+        print("Run `python setup.py` to fix it (or edit local_settings.py directly).")
+        sys.exit(1)
+
     logger.init_log()
     model = YOLO(config.MODEL_PATH)
     resumed_count = logger.get_last_count()
@@ -69,6 +75,7 @@ def main():
     stats = NightStats()
     alert_muted = not config.ALERT_ENABLED
     stats_verbose = config.STATS_VERBOSE_DEFAULT
+    public_sharing_enabled = config.PUBLIC_SHARING_ENABLED
 
     _, dashboard_port = dashboard.start_dashboard()
     print(f"Dashboard: http://{dashboard.get_lan_ip()}:{dashboard_port}/  (same wifi, from your phone)")
@@ -227,7 +234,8 @@ def main():
                 "candy_warning": candy_warning,
             }
             dashboard.update_state(**live_state)
-            remote_push.push_async(live_state)
+            if public_sharing_enabled:
+                remote_push.push_async(live_state)
 
             if config.SHOW_PREVIEW_WINDOW:
                 if panel is None:
@@ -275,6 +283,21 @@ def main():
                     panel.set_buttons(updated)
                     toast_text = "Stats: Full" if stats_verbose else "Stats: Simple"
                     toast_until = time.time() + TOAST_SECONDS
+
+                elif action == "toggle_public_sharing":
+                    public_sharing_enabled = not public_sharing_enabled
+                    updated = [
+                        (("Public: On" if public_sharing_enabled else "Public: Off"), "toggle_public_sharing")
+                        if a == "toggle_public_sharing" else (lbl, a)
+                        for lbl, a in panel.buttons
+                    ]
+                    panel.set_buttons(updated)
+                    if public_sharing_enabled and not config.RENDER_URL:
+                        toast_text = "Public ON, but no Render URL configured (run setup.py)"
+                    else:
+                        toast_text = "Public sharing ON" if public_sharing_enabled else "Public sharing OFF"
+                    toast_until = time.time() + TOAST_SECONDS
+                    print(f"Public sharing {'enabled' if public_sharing_enabled else 'disabled'}.")
 
                 elif action == "increment":
                     tracker.manual_adjust(1)

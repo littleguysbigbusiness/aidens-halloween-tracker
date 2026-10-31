@@ -50,30 +50,63 @@ def ask(prompt, default=None):
     return val if val else default
 
 
+def ask_int(prompt, default=None, min_value=None, max_value=None):
+    """Like ask(), but keeps re-prompting until the answer is a whole
+    number (so e.g. typing '10 PM' can't end up written as literal code
+    into config.py)."""
+    while True:
+        val = ask(prompt, default)
+        if val is None:
+            return None
+        try:
+            n = int(val)
+        except ValueError:
+            print(f"  '{val}' isn't a whole number — please enter digits only (e.g. 22, not '10 PM').")
+            continue
+        if min_value is not None and n < min_value:
+            print(f"  Must be at least {min_value}.")
+            continue
+        if max_value is not None and n > max_value:
+            print(f"  Must be at most {max_value}.")
+            continue
+        return n
+
+
 def main():
     print("=== Aiden's Halloween Tracker — setup ===\n")
 
-    print("Tip: use 'Scan network for a camera' below instead of typing this by hand.")
-    rtsp = ask("Camera RTSP URL (rtsp://user:pass@ip:port/path)")
-    if rtsp:
-        set_secret("RTSP_URL", repr(rtsp))
+    print("Camera setup — how do you want to find your camera?")
+    print("  1. Scan my network for it (recommended — picks it out automatically)")
+    print("  2. I'll type the RTSP URL myself")
+    choice = ask("Choose 1 or 2", "1")
+
+    rtsp_url = None
+    if choice.strip() == "2":
+        while True:
+            typed = ask("Camera RTSP URL (must start with rtsp://, e.g. rtsp://user:pass@ip:port/path)")
+            if not typed:
+                break
+            if typed.startswith("rtsp://"):
+                rtsp_url = typed
+                break
+            print(f"  '{typed}' doesn't look like a real RTSP URL (it should start with rtsp://) — try again, or leave it blank to cancel.")
+    else:
+        from network_scan import run_interactive_scan
+        rtsp_url = run_interactive_scan()
+
+    if rtsp_url:
+        set_secret("RTSP_URL", repr(rtsp_url))
         print("  Saved RTSP_URL to local_settings.py (never committed to git).")
     else:
-        scan = ask("Scan your network for a camera instead? (y/n)", "y")
-        if scan.lower().startswith("y"):
-            from network_scan import run_interactive_scan
-            found_url = run_interactive_scan()
-            if found_url:
-                set_secret("RTSP_URL", repr(found_url))
-                print("  Saved RTSP_URL to local_settings.py (never committed to git).")
+        print("  Skipped — your camera URL is unchanged.")
 
     print("\n-- Candy math (leave blank to skip this feature) --")
-    candy = ask("How many pieces of candy do you have tonight?")
-    if candy:
+    candy = ask_int("How many pieces of candy do you have tonight?", min_value=0)
+    if candy is not None:
         set_config_value("CANDY_TOTAL", candy)
-        per_visitor = ask("Pieces of candy per trick-or-treater", "2")
+        per_visitor = ask_int("Pieces of candy per trick-or-treater", "2", min_value=1)
         set_config_value("CANDY_PER_VISITOR", per_visitor)
-        end_hour = ask("What hour (24h, e.g. 21 for 9pm) should trick-or-treating end?", "21")
+        end_hour = ask_int("What hour (24h, e.g. 22 for 10pm) should trick-or-treating end?", "21", min_value=0, max_value=23)
         set_config_value("EVENT_END_HOUR", end_hour)
         print("  Saved candy settings.")
 
