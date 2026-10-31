@@ -1,0 +1,9 @@
+"""Copy this file to local_settings.py and fill in your own values.
+local_settings.py is gitignored — your camera credentials never get
+committed or pushed."""
+
+RTSP_URL = "rtsp://username:password@192.168.1.50:554/your-camera-path"
+
+# Optional — only needed if you've deployed render_app/ to Render.
+# RENDER_URL = "https://your-app.onrender.com"
+# RENDER_SECRET = "the-TRACKER_SECRET-value-render-generated"

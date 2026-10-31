@@ -1,0 +1,15 @@
+# Secrets / machine-specific settings — never commit
+local_settings.py
+
+# Generated at runtime — tally data, clips, videos, downloaded model
+tally_log.csv
+clips/
+videos/
+photos/
+yolov8n.pt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
