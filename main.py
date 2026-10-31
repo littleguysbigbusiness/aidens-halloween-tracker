@@ -46,8 +46,6 @@ NORMAL_BUTTONS = [
     ("+1", "increment"),
     ("-1", "decrement"),
     ("Edit Zone", "edit_zone"),
-    ("Stats: Full", "toggle_stats_verbose"),
-    ("Public: Off", "toggle_public_sharing"),
     ("Quit", "quit"),
 ]
 
@@ -74,8 +72,6 @@ def main():
     auto_recorder = AutoRecorder()
     stats = NightStats()
     alert_muted = not config.ALERT_ENABLED
-    stats_verbose = config.STATS_VERBOSE_DEFAULT
-    public_sharing_enabled = config.PUBLIC_SHARING_ENABLED
 
     _, dashboard_port = dashboard.start_dashboard()
     print(f"Dashboard: http://{dashboard.get_lan_ip()}:{dashboard_port}/  (same wifi, from your phone)")
@@ -189,27 +185,12 @@ def main():
                               (0, 140, 0), -1)
                 cv2.putText(frame, toast_text, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
-            # --- Live stats (sidebar + dashboard) ---
+            # --- Stats (kept for the LAN dashboard; not shown in the sidebar) ---
             last_visit_ago = stats.seconds_since_last_visit()
             busiest = stats.busiest_window_count()
-            stats_lines = [(f"Count: {tracker.total_unique_visits}", (255, 255, 255))]
-
-            if stats_verbose:
-                if config.SHOW_STAT_BIGGEST_GROUP:
-                    stats_lines.append((f"Biggest group: {stats.max_concurrent}", (200, 200, 200)))
-                if config.SHOW_STAT_BUSIEST_WINDOW:
-                    stats_lines.append((f"Busiest 10min: {busiest}", (200, 200, 200)))
-                if config.SHOW_STAT_LAST_VISIT:
-                    stats_lines.append(
-                        (f"Last visit: {format_duration(last_visit_ago)} ago" if last_visit_ago else "Last visit: -",
-                         (200, 200, 200))
-                    )
-                if config.SHOW_STAT_SESSION_DURATION:
-                    stats_lines.append((f"Running: {format_duration(stats.session_duration_seconds())}", (200, 200, 200)))
-
             candy_remaining = None
             candy_warning = False
-            if stats_verbose and config.CANDY_TOTAL is not None:
+            if config.CANDY_TOTAL is not None:
                 candy_given = tracker.total_unique_visits * config.CANDY_PER_VISITOR
                 candy_remaining = max(0, config.CANDY_TOTAL - candy_given)
                 rate = stats.visits_per_minute(tracker.total_unique_visits)
@@ -219,10 +200,6 @@ def main():
                 projected_visitors = rate * minutes_left
                 projected_candy_needed = projected_visitors * config.CANDY_PER_VISITOR
                 candy_warning = projected_candy_needed > candy_remaining
-                candy_color = (0, 0, 255) if candy_warning else (200, 200, 200)
-                stats_lines.append((f"Candy left: ~{candy_remaining}", candy_color))
-                if candy_warning:
-                    stats_lines.append(("May run out!", (0, 0, 255)))
 
             live_state = {
                 "count": tracker.total_unique_visits,
@@ -234,7 +211,7 @@ def main():
                 "candy_warning": candy_warning,
             }
             dashboard.update_state(**live_state)
-            if public_sharing_enabled:
+            if config.PUBLIC_SHARING_ENABLED:
                 remote_push.push_async(live_state)
 
             if config.SHOW_PREVIEW_WINDOW:
@@ -242,7 +219,7 @@ def main():
                     panel = ButtonPanel(list(NORMAL_BUTTONS), frame_width=frame.shape[1])
                     panel.attach(WINDOW_NAME)
 
-                display_frame = panel.render(frame, stats_lines=stats_lines)
+                display_frame = panel.render(frame)
                 cv2.imshow(WINDOW_NAME, display_frame)
                 key = cv2.waitKey(1) & 0xFF
 
@@ -281,32 +258,6 @@ def main():
                     print(f"Alert {'muted' if alert_muted else 'unmuted'}.")
                     toast_text = "Alert muted" if alert_muted else "Alert unmuted"
                     toast_until = time.time() + TOAST_SECONDS
-
-                elif action == "toggle_stats_verbose":
-                    stats_verbose = not stats_verbose
-                    updated = [
-                        (("Stats: Full" if stats_verbose else "Stats: Simple"), "toggle_stats_verbose")
-                        if a == "toggle_stats_verbose" else (lbl, a)
-                        for lbl, a in panel.buttons
-                    ]
-                    panel.set_buttons(updated)
-                    toast_text = "Stats: Full" if stats_verbose else "Stats: Simple"
-                    toast_until = time.time() + TOAST_SECONDS
-
-                elif action == "toggle_public_sharing":
-                    public_sharing_enabled = not public_sharing_enabled
-                    updated = [
-                        (("Public: On" if public_sharing_enabled else "Public: Off"), "toggle_public_sharing")
-                        if a == "toggle_public_sharing" else (lbl, a)
-                        for lbl, a in panel.buttons
-                    ]
-                    panel.set_buttons(updated)
-                    if public_sharing_enabled and not config.RENDER_URL:
-                        toast_text = "Public ON, but no Render URL configured (run setup.py)"
-                    else:
-                        toast_text = "Public sharing ON" if public_sharing_enabled else "Public sharing OFF"
-                    toast_until = time.time() + TOAST_SECONDS
-                    print(f"Public sharing {'enabled' if public_sharing_enabled else 'disabled'}.")
 
                 elif action == "increment":
                     tracker.manual_adjust(1)
