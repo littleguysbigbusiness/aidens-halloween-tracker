@@ -110,14 +110,22 @@ def main():
         set_config_value("EVENT_END_HOUR", end_hour)
         print("  Saved candy settings.")
 
-    print("\n-- Public Render dashboard (optional — needs render_app/ already deployed) --")
-    render_url = ask("Render app URL")
-    if render_url:
-        secret = ask("Render shared secret (the TRACKER_SECRET value Render generated)")
-        if secret:
-            set_secret("RENDER_SECRET", repr(secret))
-        set_secret("RENDER_URL", repr(render_url))
-        print("  Saved Render settings to local_settings.py (never committed to git).")
+    try:
+        from local_settings import RENDER_URL as existing_render_url
+    except ImportError:
+        existing_render_url = None
+
+    if existing_render_url:
+        print(f"\n-- Public Render dashboard already configured ({existing_render_url}) — skipping. --")
+    else:
+        print("\n-- Public Render dashboard (optional — needs render_app/ already deployed) --")
+        render_url = ask("Render app URL")
+        if render_url:
+            secret = ask("Render shared secret (the TRACKER_SECRET value Render generated)")
+            if secret:
+                set_secret("RENDER_SECRET", repr(secret))
+            set_secret("RENDER_URL", repr(render_url))
+            print("  Saved Render settings to local_settings.py (never committed to git).")
 
     print("\nDone. Next steps:")
     print("  1. python pick_zone.py   (draw your detection zone)")
