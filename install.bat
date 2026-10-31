@@ -15,9 +15,9 @@ echo Created local_settings.py from the template.
 :skipcopy
 
 echo.
-echo Dependencies installed. Now let's configure your camera and (optionally) candy math.
+echo Dependencies installed. Opening the setup window...
 echo.
-python setup.py
+python setup_gui.py
 
 echo.
 echo === Setup complete! ===
