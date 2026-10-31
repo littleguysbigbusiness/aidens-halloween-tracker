@@ -12,6 +12,7 @@ without saving.
 
 import cv2
 import config
+from zone import save_zone_to_config
 
 points = []
 
@@ -64,8 +65,8 @@ def main():
             if len(points) < 3:
                 print("Need at least 3 points for a zone.")
                 continue
-            print("\nPaste this into config.py:\n")
-            print(f"DETECTION_ZONE = {points}")
+            save_zone_to_config(points)
+            print(f"\nSaved to config.py: DETECTION_ZONE = {points}")
             break
 
     cv2.destroyAllWindows()

@@ -7,6 +7,8 @@ console wizard.
     python setup_gui.py
 """
 
+import subprocess
+import sys
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -196,10 +198,21 @@ class SetupApp(tk.Tk):
                 if secret:
                     set_secret("RENDER_SECRET", repr(secret))
 
-        messagebox.showinfo(
-            "Setup complete",
-            "Saved! Next steps:\n\n1. Run pick_zone.py to draw your detection zone\n2. Run main.py to start tracking",
+        messagebox.showinfo("Saved", "Settings saved! Next, let's draw your detection zone.")
+
+        draw_now = messagebox.askyesno(
+            "Draw detection zone",
+            "Open the zone-drawing window now? (Click the corners of your yard/walkway on the live camera feed.)",
         )
+        if draw_now:
+            self.withdraw()
+            subprocess.run([sys.executable, "pick_zone.py"])
+            self.deiconify()
+
+        start_now = messagebox.askyesno("Start tracking", "Setup's done! Launch the tracker now?")
+        if start_now:
+            subprocess.Popen([sys.executable, "main.py"])
+
         self.destroy()
 
 
